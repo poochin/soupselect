@@ -57,6 +57,7 @@ def select(soup, selector):
     """
     tokens = selector.split()
     current_context = [soup]
+    find_descendant = True
     for token in tokens:
         m = attribselect_re.match(token)
         if m:
@@ -67,18 +68,20 @@ def select(soup, selector):
             checker = attribute_checker(operator, attribute, value)
             found = []
             for context in current_context:
-                found.extend([el for el in context.findAll(tag) if checker(el)])
+                found.extend([el for el in context.findAll(tag, recursive=find_descendant) if checker(el)])
             current_context = found
+            find_descendant = True
             continue
         if '#' in token:
             # ID selector
             tag, id = token.split('#', 1)
             if not tag:
                 tag = True
-            el = current_context[0].find(tag, {'id': id})
+            el = current_context[0].find(tag, {'id': id}, recursive=find_descendant)
             if not el:
                 return [] # No match
             current_context = [el]
+            find_descendant = True
             continue
         if '.' in token:
             # Class selector
@@ -91,24 +94,33 @@ def select(soup, selector):
                 found.extend(
                     context.findAll(tag,
                         {'class': lambda attr:
-                             attr and classes.issubset(attr.split())}
+                             attr and classes.issubset(attr.split())},
+                        recursive=find_descendant
                     )
                 )
             current_context = found
+            find_descendant = True
             continue
         if token == '*':
             # Star selector
             found = []
             for context in current_context:
-                found.extend(context.findAll(True))
+                found.extend(context.findAll(True, recursive=find_descendant))
             current_context = found
+            find_descendant = True 
             continue
+        if token == '>':
+            # Child selector
+            find_descendant = False
+            continue
+            
         # Here we should just have a regular tag
         if not tag_re.match(token):
             return []
         found = []
         for context in current_context:
-            found.extend(context.findAll(token))
+            found.extend(context.findAll(token, recursive=find_descendant))
+        find_descendant = True
         current_context = found
     return current_context
 

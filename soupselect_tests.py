@@ -207,6 +207,7 @@ class TestAttributeSelectors(BaseTest):
             ('p[blah]', []),
         )
 
+
 class TestMonkeyPatch(BaseTest):
     
     def assertSelectMultipleExplicit(self, soup, *tests):
@@ -253,6 +254,34 @@ class TestMonkeyPatch(BaseTest):
         unmonkeypatch()
         
         self.assertRaises(TypeError, soup.findSelect, '*')
+
+
+class TestChildSelector(BaseTest):
+
+    def test_child_tag(self):
+        self.assertSelectMultiple(
+            ('body > div', ['main', 'footer']),
+            ('html > head > link', ['l1']),
+            ('div#main > p', ['lang-en', 'lang-en-gb', 'lang-en-us', 'lang-fr']),
+        )
+
+    def test_child_unmached_tag(self):
+        els = select(self.soup, 'html > link')
+        self.assertEqual(len(els), 0)
+
+    def test_child_id(self):
+        self.assertSelect('div > div#inner', ['inner'])
+
+    def test_child_class(self):
+        self.assertSelect('div#inner > .onep', ['p1'])
+        self.assertSelect('div#main > .onep', [])  # unmached
+
+    def test_child_start(self):
+        self.assertEqual(len(select(self.soup, 'div#main > *')), 5)
+
+    def test_child_attr(self):
+        self.assertSelect('div#main > p[lang="en"]', ['lang-en'])
+        self.assertSelect('div#inner > [rel]', ['bob', 'me'])
 
 
 HTML = """
